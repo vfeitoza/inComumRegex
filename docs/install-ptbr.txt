@@ -1,0 +1,61 @@
+INSTALAÇÃO
+==========
+
+PRÉ-REQUISITOS
+--------------
+=> Squid >= v2.7
+Para melhor resultados, o Squid deve estar compilado com a diretiva --enable-http-violations.
+
+Algumas versões podem apresentar problemas. Leia o leiame.txt antes de instalar.
+
+INSTALAÇÃO
+----------
+
+1. colocar o arquivo inComum em /usr/lib/squid
+
+# cp ./inComum /usr/lib/squid/
+
+2. torná-lo executável
+
+# chmod +x /usr/lib/squid/inComum
+
+3. mudar o dono para o mesmo do squid (geralmente proxy.proxy):
+
+# chown proxy.proxy /usr/lib/squid/inComum
+
+4. Instalar o script no squid.conf
+
+4.1. configuracoes do redirecionador que faz a equivalência das URL
+
+storeurl_rewrite_program /usr/lib/squid/inComum
+storeurl_rewrite_children 10 //depende da sua carga. Normalmente use de 5 a 100.
+
+4.2. acl pra só mandar as URL modificáveis pro redirecionador
+
+acl store_rewrite_list dstdomain .youtube.com .googlevideo.com orkut.com .avast.com .catalog.video.msn.com .blip.tv
+storeurl_access allow store_rewrite_list
+storeurl_access deny all
+
+4.3. remover um desserviço do Squid
+4.3.1. COMENTAR estas linhas (para desativá-las)
+
+acl QUERY urlpath_regex cgi-bin \?
+cache deny QUERY
+
+4.3.2. inserir esta, logo abaixo
+
+cache allow all
+
+5. não expirar vídeos do youtube - atualmente (fev/2010), expiram com menos de 2 horas.
+# ATENÇÃO: colocar esta linha ANTES das outras linhas refresh_pattern
+
+refresh_pattern (get_video\?|videoplayback\?|videodownload\?) 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+refresh_pattern ^http:\/\/av\.vimeo\.com\/.*\.(mp4|flv) 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+refresh_pattern ^http:\/\/.{0,2}\.video[0-9]\.blip\.tv.*\.(flv|mp4|wmv|rm|ram|mov|avi|m4v|mp3) 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+refresh_pattern ^http://flashvideo.globo.com/*mp4 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+refresh_pattern (catalog.video.msn.com) 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+
+6. Não esqueça de aumentar o tamanho dos objetos do seu cache.
+# entre 30 e 100MB normalmente é um bom valor
+
+maximum_object_size 30 MB

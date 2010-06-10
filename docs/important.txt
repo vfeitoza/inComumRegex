@@ -1,0 +1,24 @@
+IMPORTANT
+=========
+
+Don't put on production before read this!
+
+There is a possibility for your Squid to be imcompatible with this script.
+When you initialize Squid, a process-father has the basic function to initialize process-children.
+These shall receive and treat the requests. 
+
+In some versions, each process-child initialize some instancy from sctipt called in storeurl_rewrite_program.
+These process-children stay active until the process-father decides to remove them from memory.
+In some versions of Squid, when process-children are removed from memory, they do not remove the external program, letting it “orphan”.
+In younger versions, that does not occur. 
+
+You need to see if your version of Squid produces this unexpected result before putting it in production. 
+This can be done verifying how many processes run inComum:
+
+$ ps ax|grep –v grep inComum 
+
+It is normal that the number is a little bit bigger or smaller than the number shown in storeurl_rewrite_children. It is a problem if this number keeps growing (it will take all your memory with ghosts processes).
+
+Observe the system at the first day and check out its behavior.
+
+If there are not large changes in quantity, your system is ready to have the script implanted.

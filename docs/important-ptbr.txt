@@ -1,0 +1,29 @@
+IMPORTANTE
+==========
+
+Não coloque o sistema em produção antes de ler isto!
+
+Há uma possibilidade de seu Squid ser incompatível com este script.
+Quando você inicia o Squid, um processo pai possui basicamente a função de iniciar processos-filhos.
+Estes sim vão receber e tratar as requisições.
+
+Em algumas versões, cada processo-filho inicia uma instância do script chamado em storeurl_rewrite_program.
+Estes processos-filhos ficam ativos até que o processo-pai decida removê-los da memória.
+Em algumas versões do Squid, quando os processos-filhos são removidos da memória,
+eles não removem o programa externo, deixando-o "órfão".
+Em versões mais novas, isto não ocorre.
+
+Você precisa ver se sua versão do Squid produz este resultado inesperado
+antes de colocá-lo em produção.
+
+Isso pode ser feito verificando-se quantos processos executam o inComum:
+
+$ ps ax|grep -v grep|grep inComum
+
+É normal que o número seja um pouco maior ou menor que o número que o
+explicitado em storeurl_rewrite_children. É um problema se este número
+continuar a crescer sem cessar (ele tomará toda a sua memória com processos fantasmas).
+Monitore o sistema no primeiro dia e veja seu comportamento.
+
+Se não houver grandes alterações na quantidade, seu sistema está pronto para ter o
+script implantado.

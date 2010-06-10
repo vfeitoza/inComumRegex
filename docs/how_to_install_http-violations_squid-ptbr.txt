@@ -1,0 +1,78 @@
+﻿Para que você possa usar as opções nas definições de refresh pattern, precisa compilar o Squid com a opção –enable-http-violations, o que não é o padrão na maioria das distribuições. Abaixo está um tutorial que pode ser seguido para a instalação na distribuição debian e derivadas.
+
+
+1. Prepare o ambiente
+Instale os arquivos necessários para a compilação.
+Do man do apt-get: "build-dep causes apt-get to install/remove packages in an attempt to satisfy the build dependencies for a source package."
+
+# apt-get build-dep squid
+
+2. Baixe os fontes do squid
+O sistema baixa e aplica os patchs da versão.
+
+# apt-get source squid
+
+3. Edite as configurações de compilação no arquivo ./debian/rules
+
+# vim <diretório source squid>/debian/rules
+
+3.1. Encontre as seguintes linhas dentro do arquivo rules:
+# Configure the package.
+config.status:
+
+No meu caso (squid-2.7.STABLE9), estavam nas linhas 132 e 133.
+
+3.2. Adicione as violações HTTP.
+Neste ponto, você encontrará uma série de opções. Adicione as violações no meio delas.
+A minha seção ficou assim (perceba a linha 166):
+
+132 # Configure the package.
+133 config.status:
+134
+135 rm cfgaux/config.sub cfgaux/config.guess
+136	ln -s /usr/share/misc/config.sub cfgaux/
+137	ln -s /usr/share/misc/config.guess cfgaux/
+138
+139	$(opt_ac_cv_func_setresuid) \
+140	./configure \
+141	--prefix=/usr \
+142	--exec_prefix=/usr \
+143	--bindir=/usr/sbin --sbindir=/usr/sbin \
+144	--libexecdir=/usr/lib/squid \
+145	--sysconfdir=$(sysconfdir) \
+146	--localstatedir=/var/spool/squid \
+147	--datadir=/usr/share/squid \
+148	$(with_pthreads) \
+149	$(with_netfilter) \
+150	$(with_arp_acl) \
+151	$(with_epoll) \
+152	--enable-removal-policies=lru,heap \
+153	--enable-snmp \
+154	--enable-delay-pools \
+155	--enable-htcp \
+156	--enable-cache-digests \
+157	--enable-underscores \
+158	--enable-referer-log \
+159	--enable-useragent-log \
+160	--enable-auth="basic,digest,ntlm,negotiate" \
+161	--enable-negotiate-auth-helpers=squid_kerb_auth \
+162	--enable-carp \
+163	--enable-follow-x-forwarded-for \
+164	--with-large-files \
+165	--with-maxfd=65536 \
+166	--enable-http-violations \
+167	$(DEB_HOST_ARCH_CPU)-debian-$(DEB_HOST_ARCH_OS)
+
+4. Gere os .deb.
+Você deve estar no diretório <source squid> para usar o comando. Se estiver ainda no ./debian/, suba um nível.
+
+# dpkg-buildpackage
+
+Será gerado um squid_<versão>.deb e um squid-common_<versão>.deb no diretório acima do <source_squid>
+
+5. Instale os debs gerados.
+
+# dpkg -i squid_2.7.STABLE9-2_i386.deb squid-common_2.7.STABLE9-2_all.deb
+
+
+Feito isso, você estará com um Squid poderoso, do qual irá usar todo o potencial do refresh pattern.

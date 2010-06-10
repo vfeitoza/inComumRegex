@@ -1,0 +1,31 @@
+Changelog
+=========
+
+0.3.2
+-----
+Added globo.com video. Thanks to Danilo F. and V. Feitoza.
+Optimized for --enable-http-violations
+Some functions rewritten. Some code relocated.
+added -v version check parameter.
+
+0.3.1
+-----
+missing reference to blip.tv in install-ptbr.txt refresh patterns.
+more compatible with amd64 (unsigned int changed to std::string::size_type).
+
+0.3
+---
+Added blip.tv videos. Thanks to Danillo F.
+
+0.2.4
+-----
+
+Youtube changed his quality GET var to itag (it was fmt previously) and
+redirection mechanism.
+
+0.2.3
+-----
+
+Vimeo Videos Added.
+(also a refresh pattern to keep these videos longer)
+

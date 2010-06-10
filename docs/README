@@ -1,0 +1,20 @@
+inComum v 0.3.2
+=======
+Squid helper to be used with storeurl_rewrite_program feature.
+His goal is to create equivalency rules for distinct but equivalent URLs.
+This allows you to cache resources from domains witch do load balance.
+Eg: youtube, avast, etc.
+
+Some sites add HTTP headers to avoid cache (or, at last, to reduce it).
+Because of that, this program works better when Squid is compiled with
+--enable-http-violations directive.
+
+You may check typing "% squid -v" on your shell prompt. In the case your
+installed pack has not hits directive (and you are using debian), you
+may follow the tutorial wich comes with this documentation.
+
+Project Page
+http://sourceforge.net/projects/incomum/
+
+Luciano Pinheiro.
+lucianopinheiro@users.sourceforge.net

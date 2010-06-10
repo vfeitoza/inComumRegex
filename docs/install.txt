@@ -1,0 +1,61 @@
+INSTALAÇÃO
+==========
+
+PRE-REQUISITES
+--------------
+=> Squid >= v2.7
+For better results, Squid must be compiled with --enable-http-violations directive.
+
+Some versions can present problems. Read important.txt before install.
+
+INSTALL
+----------
+
+1. Put file inComum in /usr/lib/squid
+
+# cp ./inComum /usr/lib/squid/
+
+2. Make it runnable
+
+# chmod +x /usr/lib/squid/inComum
+
+3. Change owner to tha same squid runner (usually proxy.proxy):
+
+# chown proxy.proxy /usr/lib/squid/inComum
+
+4. Install helper on squid.conf
+
+4.1. Redirector config wich makes URL equivalency
+
+storeurl_rewrite_program /usr/lib/squid/inComum
+storeurl_rewrite_children 10 //depends on your load. Usually between 5 to 100.
+
+4.2. acl to send only changeable URLs to redirector.
+
+acl store_rewrite_list dstdomain .youtube.com .googlevideo.com orkut.com .avast.com .catalog.video.msn.com .blip.tv
+storeurl_access allow store_rewrite_list
+storeurl_access deny all
+
+4.3. Remove a Squid crazyness
+4.3.1. COMMENT these lines (to disable it)
+
+acl QUERY urlpath_regex cgi-bin \?
+cache deny QUERY
+
+4.3.2. Insert it, beneath
+
+cache allow all
+
+5. To not expire youtube videos - now (feb/2010), they do in less than 2 hours.
+# IMPORTANT: put these lines BEFORE other refresh_pattern lines
+
+refresh_pattern (get_video\?|videoplayback\?|videodownload\?) 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+refresh_pattern ^http:\/\/av\.vimeo\.com\/.*\.(mp4|flv) 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+refresh_pattern ^http:\/\/.{0,2}\.video[0-9]\.blip\.tv.*\.(flv|mp4|wmv|rm|ram|mov|avi|m4v|mp3) 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+refresh_pattern ^http://flashvideo.globo.com/*mp4 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+refresh_pattern (catalog.video.msn.com) 5259487 999% 5259487 override-expire reload-into-ims stale-while-revalidate=2592000
+
+6. Don't forget to increase the size of your maximum objects.
+# between 30 and 100MB is usually a good number.
+
+maximum_object_size 30 MB
