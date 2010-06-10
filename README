@@ -1,0 +1,26 @@
+Plugin para Squid a ser usado com o recurso storeurl_rewrite_program.
+Seu objetivo é criar uma equivalência entre URLs em domínios diferentes, mas equivalentes.
+Isto permite a você fazer cache de recursos de diferentes, mas equivalentes subdomínios.
+Ex: youtube, avast, etc.
+
+Alguns sites inserem cabeçalhos HTTP para impedir o cache (ou, pelo menos, para reduzi-lo).
+Por isso, este programa funciona melhor quando o Squid está compilado com a diretiva
+--enable-http-violations.
+
+Você pode verificar isso digitando % squid -v.
+Caso não esteja com a diretiva instalada (e esteja usando debian), você pode seguir
+o tutorial que acompanha esta documentação.
+
+O fork apresenta algumas funcionalidades a mais, criadas na tentativa de englobar mais domínios
+ao projeto, utilizando expressões regulares.
+
+Página do Projeto
+http://sourceforge.net/projects/incomum/
+
+Autor
+Luciano Pinheiro
+lucianopinheiro@users.sourceforge.net
+
+Fork criado por
+Victor Feitoza
+vfeitoza@gmail.com
