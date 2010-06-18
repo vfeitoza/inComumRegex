@@ -1,8 +1,3 @@
-#include <iostream>
-#include <regex.h>
-#include <string>
-#include <vector>
-
 /*
  * BSD License
  *
@@ -37,125 +32,146 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * to compile, use following line:
 * $ g++ -Wall -o "inComum" "inComum.cpp"
 *
-* verion 0.3.2
+* verion 0.4.b
 *
 */
 
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <regex.h>
+
 using namespace std;
 
-string get_var(const string url,const string var); //get some var from url
-string get_path(const string url, const char removeQuery); //path only (optionally remove query string)
-string get_domain(const string url); //get domain only (remove path)
-string regexMatch(string er, string line); //ER's
-void stringExplode(string str, string separator, vector<string>* results); //explode string
-string getFileName(string url); //get filename for url
+//Functions
+std::vector<std::string> read_file(char file[20]);
+std::vector<std::string> StringExplode(std::string str, std::string separator);
+std::vector< std::vector<std::string> > serialize_rules(std::vector<std::string> content);
+std::string get_var(const std::string url,const std::string var);
+std::string get_path(const std::string url, const char removeQuery);
+std::string get_domain(const std::string url);
+std::string mount_query(std::string url, std::string rules);
+std::string clean_domain_regex(std::string regex);
+std::string remove_char(std::string str,std::string c);
+bool regexMatch(string line, string er) ;
 
-int main(int argc, char **argv)
-{
-	string url, urlf, id, domain;
-	string::size_type x;
+//Vars
+std::vector< std::vector<std::string> > rules;
 
-	if (argc > 1) {
+int main(int argc, char **argv){
+	char conf_file[]="incomum.conf";
+    rules=serialize_rules(read_file(conf_file));
+    std::string url, domain, urlf;
+    string::size_type x;
+    
+	if(argc > 1){
 		if(argv[1][0] == '-' && argv[1][1] == 'v' ) {
-			cout << "inComum 0.3.2" << endl;
-			_exit(0);
+			cout << "inComum 0.4.0" << endl;
+			return 0;
 		}
 	}
-
-	while(getline(std::cin, url)){ // main loop receive all redirecting URL
-
+	
+    while (std::cin){
+		std::getline(std::cin, url);
 		x = url.find_first_of(" ");
+		
 		if(x != string::npos){
 			url = url.erase(x);
 		}
-		domain = get_domain(url);
 
 		//https is just tunneling (can't cache) - don't cache ftp either
-		if(url.substr(0,8) == "https://" || url.substr(0,6) != "ftp://"){
+		if(url.substr(0,8) == "https://" || url.substr(0,6) == "ftp://"){
 			cout << url << endl;
 			continue;
 		}
 
 		//squid may send a blank line to exit
 		if(url.empty() || url.substr(0,7) != "http://"){
+			cout << url << endl;
 			return 0;
 		}
-
-		//youtube plugin
-		if ( ( (domain.find("googlevideo.com/") != string::npos) || (domain.find("youtube.com/") != string::npos) ) &&
-		( (url.find("/get_video?") != string::npos) || (url.find("/videoplayback?") != string::npos) || (url.find("/videoplay?") != string::npos) ) &&
-		( (url.find("id=") != string::npos) || (url.find("video_id=") != string::npos) ) &&
-		( url.find("begin=") == string::npos ) )
+        
+        urlf=url;
+		for (unsigned int i=0; i < rules.size(); i++)
 		{
-			if(url.find("noflv=") != string::npos && url.find("ptk=") == string::npos){ //(noflv AND !ptk) => redirecting URL
-				urlf = url;
-			}else{
-				id = get_var(url, "id");
-				if(id.length() == 0){
-					id = get_var(url, "video_id");
+			if ((regexMatch(url, rules[i][1])) &&
+			    (regexMatch(url, rules[i][2]) || (rules[i][2] == ".")) &&
+			   (!regexMatch(url, rules[i][3])  || (rules[i][3] == "."))){
+				urlf = "http://"+clean_domain_regex(rules[i][1])+".inComum/";
+				
+				if(rules[i][4].find("get_path") != std::string::npos){
+					urlf = urlf + get_path(url, 'Y');
+				}else if(rules[i][4].find("query") != std::string::npos){
+					urlf=urlf+mount_query(url,rules[i][4]);
 				}
-				urlf = "http://flv.youtube.inComum/?id="+id+"&quality="+get_var(url, "fmt")+get_var(url, "itag")+"&redirect_counter="+get_var(url, "redirect_counter")+get_var(url, "st");
 			}
+	    }
+	    std::cout << urlf << std::endl;
+    }
+}
 
-		//orkut img plugin
-		}else if(domain.find(".orkut.com/") != string::npos && domain.find("http://img") != string::npos){
-			urlf = "http://img.orkut.inComum/"+get_path(url,'N');
-
-		//orkut static plugin
-		}else if(domain.find(".orkut.com/") != string::npos && domain.find("http://static") != string::npos ){
-			urlf = "http://static.orkut.inComum/"+get_path(url,'N');
-
-		//avast plugin
-		}else if(domain.find(".avast.com/") != string::npos && domain.find("http://download") != string::npos){
-			urlf = "http://download.avast.inComum/"+get_path(url,'N');
-
-		//vimeo plugin
-		}else if(domain.find("http://av.vimeo.com/") != string::npos && url.find("?token=") != string::npos){
-			urlf = "http://vimeo.inComum/"+get_path(url,'Y');
-
-		//blip.tv plugin
-		}else if(domain.find("blip.tv") != string::npos && domain.find("video") != string::npos){
-			urlf = "http://bliptv.inComum/"+get_path(url,'Y');
-
-		//globo plugin
-		}else if(domain.find("flashvideo.globo.com") != string::npos && url.find("mp4") != string::npos){
-			urlf = "http://flashvideo.globo.inComum/"+get_path(url,'Y');
-
-		//msn catalog videos plugin
-		}else if(domain.find("catalog.video.msn.com/") != string::npos && url.find("share") != string::npos){
-			urlf = "http://catalog.msn.inComum/"+get_path(url,'N');
-
-		//redtube plugin
-		}else if((domain.find(".cdn.redtube.com") != string::npos) && 
-		         (regexMatch("videos-[0-9]{3,4}\\.cdn\\.redtube\\.com\\/s\\/[0-9]{7}\\/[a-zA-Z0-9]{9,12}\\.flv", url ) != "")){
-			urlf = "http://videos.redtube.inComum/"+ getFileName(url) +"?rs="+ get_var(url, "rs");
-
-		//pornhub plugin
-		}else if((regexMatch("nyc-v[0-9]{1,4}\\.pornhub\\.com\\/dl\\/", url ) != "") && 
-		         (regexMatch("(flv|mp4)", url ) != "") && (regexMatch("start=", url ) == "")){
-			urlf = "http://videos.pornhub.inComum/"+ getFileName(url);
-			
-		//pornotube plugin
-		}else if((regexMatch("video[0-9]{1,2}\\.pornotube\\.com\\/", url ) != "") && (regexMatch("(flv|mp4)", url ) != "")){
-			urlf = "http://videos.pornotube.inComum/"+ getFileName(url);
-
-		//else, return the same URL
-		}else{
-			urlf = url;
-		}
-
-		//send urlf back to squid
-		cout << urlf << endl;
+std::string mount_query(std::string url, std::string rules){
+	std::string query;
+	std::vector<string> vec_rules;
+	vec_rules=StringExplode(rules.substr(rules.find_first_of("=")+1),"|");
+	for (unsigned int i=0; i<vec_rules.size(); i++){
+		if (url.find(vec_rules[i]) != std::string::npos){
+			query=query+vec_rules[i]+"="+get_var(url,vec_rules[i])+"&";
+	    }
 	}
-	return 0;
+	
+	return query.substr(0,query.size()-1);
+}
+
+std::vector<std::string> read_file(char file[20]){
+  std::string line;
+  std::ifstream myfile (file);
+  std::vector<std::string> content;
+  if (myfile.is_open()){
+    while (! myfile.eof() ) {
+      getline (myfile,line);
+      if ( ! regexMatch(line,"^$")) {
+	    content.push_back(line);
+	  }
+    }
+    myfile.close();
+  }else{
+	std::cout << "Unable to open file";
+  }
+  return content;
+}
+
+std::vector< std::vector<std::string> > serialize_rules(std::vector<std::string> content){
+  std::vector< std::vector<std::string> > serialized_rules;
+  for (unsigned int i=0; i<content.size(); i++) {
+	  serialized_rules.push_back(StringExplode(content[i], " "));
+  }
+  return serialized_rules;
+}
+
+std::vector<std::string> StringExplode(std::string str, std::string separator){
+    std::string::size_type found;
+    std::vector<std::string> results;
+    found = str.find_first_of(separator);
+    while(found != std::string::npos){
+        if(found > 0){
+            results.push_back(str.substr(0,found));
+        }
+        str = str.substr(found+1);
+        found = str.find_first_of(separator);
+    }
+    if(str.length() > 0){
+        results.push_back(str);
+    }
+    return results;
 }
 
 /* return the value of a URL var */
-string get_var(const string url,const string var)
-{
-	string par, v, valor, vars;
+std::string get_var(const std::string url,const std::string var){
+	std::string par, v, valor, vars;
 
-	if(url.find("?") != string::npos){
+	if(url.find("?") != std::string::npos){
 		vars = url.substr(url.find("?")+1);
 	}
 
@@ -166,7 +182,7 @@ string get_var(const string url,const string var)
 		if(v == var){
 			return par.substr(par.find_first_of("=")+1);
 		}
-		if(vars.find_last_of("&") != string::npos){
+		if(vars.find_last_of("&") != std::string::npos){
 			vars.erase(vars.find_last_of("&"));
 		}else{
 			vars.erase();
@@ -176,18 +192,17 @@ string get_var(const string url,const string var)
 }
 
 /* return URL path */
-string get_path(const string url, const char removeQuery)
-{
-	string temp, path;
-	string::size_type x;
+std::string get_path(const std::string url, const char removeQuery){
+	std::string temp, path;
+	std::string::size_type x;
 
 	temp = url.substr(7);
 	x = temp.find_first_of("/");
-	if(x != string::npos){
+	if(x != std::string::npos){
 		path = temp.substr(x+1);
 		if(removeQuery == 'Y'){
 			x = path.find_first_of("?");
-			if(x != string::npos){
+			if(x != std::string::npos){
 				path = path.erase(x);
 			}
 		}
@@ -198,67 +213,47 @@ string get_path(const string url, const char removeQuery)
 }
 
 /* return URL domain */
-string get_domain(const string url)
-{
-	string retorno;
-	string::size_type x;
+std::string get_domain(const std::string url){
+	std::string retorno;
+	std::string::size_type x;
 
 	x = url.find_first_of("/", 7);
-	if(x != string::npos){
+	if(x != std::string::npos){
 		return url.substr(0,x+1);
 	}else{
 		return url;
 	}
-
 }
 
-// usando ER's para facilitar a vida [risos]
-string regexMatch(string er, string line) 
-{
+std::string remove_char(std::string str,std::string c){
+	std::string::size_type found;
+	found = str.find_first_of(c);
+    while(found != std::string::npos){
+        str=(str.erase(found,1));
+        found = str.find_first_of(c);
+    }
+    return str;
+}
+
+std::string clean_domain_regex(std::string regex){
+	regex=remove_char(regex,".");
+	regex=remove_char(regex,"*");
+	regex=remove_char(regex,"\\");
+	return regex;
+}
+
+bool regexMatch(string line, string er) {
     int error;
     regmatch_t match;
     regex_t reg;
     if ((regcomp(&reg, er.c_str(), REG_EXTENDED | REG_NEWLINE)) == 0) {
         error = regexec(&reg, line.c_str(), 1, &match, 0);
         if (error == 0) {
-            return line.substr(match.rm_so, match.rm_eo - match.rm_so);
+            return true;
         } else {
-            return "";
+            return false;
         }
     } else {
-        return "";
-    }
-}
-
-// quebramos a string em vetores (arrais)
-void stringExplode(string str, string separator, vector<string>* results)
-{
-    int found;
-    found = str.find_first_of(separator);
-    while(found != string::npos){
-        if(found > 0){
-            results->push_back(str.substr(0,found));
-        }
-        str = str.substr(found+1);
-        found = str.find_first_of(separator);
-    }
-    if(str.length() > 0){
-        results->push_back(str);
-    }
-}
-
-// pegarmos apenas o nome do arquivo
-string getFileName(string url)
-{
-    vector<string> resultado;
-    if (url.find("?") != string::npos) {
-        stringExplode(url, "?", &resultado);
-        stringExplode(resultado.at(resultado.size() - 2), "/", &resultado);
-
-        return resultado.at(resultado.size() -1);
-    } else {
-        stringExplode(url, "/", &resultado);
-
-        return resultado.at(resultado.size() -1);
+        return false;
     }
 }
